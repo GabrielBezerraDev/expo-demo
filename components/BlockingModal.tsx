@@ -18,6 +18,7 @@ interface PickerOptionsInterface {
   execFunction: (closeModal: () => void) => void;
   setVariable: (value:any) => void;
   selectValue: PickerInterface[];
+  titlePlaceHolder: string;
 }
 
 interface ModalOptionsInterface {
@@ -68,7 +69,7 @@ const BlockingModal = forwardRef(
                     onValueChange={(itemValue: any) => pickerOptios.setVariable(itemValue)}
                     style={styles.picker}
                   >
-                    <Picker.Item label="Selecione uma comida..." value="" />
+                    <Picker.Item label={pickerOptios.titlePlaceHolder} value="" />
   
                     {pickerOptios.selectValue.map((value: PickerInterface) => (
                       <Picker.Item label={value.label} value={value.value} />

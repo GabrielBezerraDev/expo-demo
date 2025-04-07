@@ -74,6 +74,7 @@ export default function HomeScreen() {
           visible: table ? false : true,
           activePicker: true,
           pickerOptions: {
+            titlePlaceHolder: "Escolha a Mesa",
             selectValue: [
               {
                 value: 1,
