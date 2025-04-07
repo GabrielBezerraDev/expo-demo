@@ -42,7 +42,7 @@ export default function OrderForm() {
   };
 
   const handleSubmit = () => {
-    if (!clientName || !tableNumber || !food) {
+    if (!clientName || !food) {
       Alert.alert("Erro", "Preencha todos os campos obrigatórios");
       return;
     }
@@ -78,7 +78,7 @@ export default function OrderForm() {
       <BlockingModal
         ref={modalRef}
         modalOptions={{
-          modalText: "teste",
+          modalText: "Pedido Feito!",
           buttonTitle: "Okay",
         }}
       ></BlockingModal>
