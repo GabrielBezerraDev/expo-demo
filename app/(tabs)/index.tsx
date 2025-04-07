@@ -1,5 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { Image, StyleSheet, Platform, ActivityIndicator, Button, Text } from "react-native";
+import {
+  Image,
+  StyleSheet,
+  Platform,
+  ActivityIndicator,
+  Button,
+  Text,
+} from "react-native";
 import { HelloWave } from "@/components/HelloWave";
 import ParallaxScrollView from "@/components/ParallaxScrollView";
 import { ThemedText } from "@/components/ThemedText";
@@ -17,6 +24,7 @@ export default function HomeScreen() {
   const [table, setTable] = useState<number>(
     tableLocalStorage ? Number(JSON.parse(tableLocalStorage).table) : 0
   );
+  console.log(table);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -41,25 +49,24 @@ export default function HomeScreen() {
     fetchOrder();
   }, []);
 
-  if (loading) {
-    return (
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#0000ff" />
-      </View>
-    );
-  }
-
-  if (orders.length === 0) {
-    return (
-      <View style={styles.centerContainer}>
-        <Text style={styles.emptyText}>Nenhum pedido encontrado</Text>
-        <Button title="Recarregar" onPress={fetchOrder} color={"#FFA500"} />
-      </View>
-    );
-  }
-
   return (
-    <ScrollView style={styles.container}>
+    <>
+      {loading ? (
+        <View style={styles.centerContainer}>
+          <ActivityIndicator size="large" color="#0000ff" />
+        </View>
+      ) : orders.length === 0 ? (
+        <View style={styles.centerContainer}>
+          <Text style={styles.emptyText}>Nenhum pedido encontrado</Text>
+          <Button title="Recarregar" onPress={fetchOrder} color={"#FFA500"} />
+        </View>
+      ) : (
+        <ScrollView style={styles.container}>
+          {orders.map((order, index) => (
+            <Card key={index} order={order} />
+          ))}
+        </ScrollView>
+      )}
       <BlockingModal
         modalOptions={{
           modalText: "Qua é a sua mesa?",
@@ -106,10 +113,7 @@ export default function HomeScreen() {
           },
         }}
       ></BlockingModal>
-      {orders.map((order, index) => (
-        <Card key={index} order={order} />
-      ))}
-    </ScrollView>
+    </>
   );
 }
 
@@ -144,5 +148,5 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: "#666",
     marginBottom: 20,
-  }
+  },
 });
