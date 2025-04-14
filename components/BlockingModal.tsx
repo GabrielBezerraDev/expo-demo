@@ -59,7 +59,7 @@ const BlockingModal = forwardRef(
         animationType="fade"
         onRequestClose={closeModal}
       >
-        <View style={styles.overlay}>
+        <View  style={styles.overlay}>
           <View style={styles.modalContainer}>
             <Text style={styles.modalText}>{modalOptions.modalText}</Text>
             {(() => {
