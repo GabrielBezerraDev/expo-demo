@@ -13,7 +13,7 @@ import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { Card } from "../../components/Card";
 import { View } from "react-native";
-import { ScrollView } from "react-native-gesture-handler";
+import { ScrollView } from "react-native";
 import { supabase } from "@/services/supabase";
 import BlockingModal from "@/components/BlockingModal";
 import { OrderInterfaceGet } from "@/interfaces/OrderInterface";

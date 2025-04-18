@@ -1,22 +1,32 @@
 import { supabase } from "@/services/supabase";
 import SegmentedControl from "@react-native-segmented-control/segmented-control";
 import { Link } from "expo-router";
-import { RefObject, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import DateTimePicker, {
+  DateTimePickerEvent,
+} from "@react-native-community/datetimepicker";
 import {
   StyleSheet,
   Text,
   View,
-  Modal,
   Pressable,
   ActivityIndicator,
+  Dimensions,
+  LayoutChangeEvent,
+  Button,
+  Module,
+  Platform,
 } from "react-native";
-import { ScrollView } from "react-native-gesture-handler";
-import { BarChart } from "react-native-gifted-charts";
-import Animated, {
-  FadeIn,
-  Keyframe,
-  SlideInRight,
-} from "react-native-reanimated";
+import { BarChart } from "react-native-chart-kit";
+import Animated, { SlideInRight } from "react-native-reanimated";
+import {
+  VictoryAxis,
+  VictoryBar,
+  VictoryChart,
+  VictoryTheme,
+} from "victory-native";
+
+type Mode = "date" | "time" | "datetime";
 
 async function getFoods(): Promise<any> {
   let formatData: any[] = [];
@@ -26,8 +36,6 @@ async function getFoods(): Promise<any> {
   dataMenu.forEach((menu: any) => {
     dataMenuColumns.set(menu.food, {
       key: menu.id,
-      frontColor: "#ff1900",
-      gradientColor: "#48ff00",
       label: menu.food,
     });
   });
@@ -82,100 +90,149 @@ function createColumns(formatData: any) {
 
 export default function ModalChart() {
   let teste = useRef<View>(null);
+
   let [loading, setLoading] = useState(false);
+  let [widthView, setWidthView] = useState(0);
   let [dataFood, setDataFood] = useState<any>([]);
+  let [dataX, setDataX] = useState<any>();
+  let [dataLabels, setDataLabels] = useState<any>();
+  let [dataY, setDataY] = useState<any>();
   let [maxY, setMaxY] = useState<any>();
 
-  const loadData = async () => {
-    const foods = await getFoods();
-    setDataFood([...foods]);
-    setMaxY(foods[0].value);
+  const [date, setDate] = useState<Date>(new Date());
+  const [showPicker, setShowPicker] = useState<boolean>(false);
+  const [mode, setMode] = useState<Module>("date");
+
+  const onChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
+    const currentDate = selectedDate || date;
+    setShowPicker(Platform.OS === "ios");
+    if (currentDate) {
+      setDate(currentDate);
+    }
   };
 
-  // animationCharts<View>(teste.current);
+  const showDatePicker = (currentMode: Mode) => {
+    setShowPicker(true);
+    setMode(currentMode);
+  };
 
+  const unravelObjectList = (
+    objects: Record<any, any>[],
+    ...keys: string[]
+  ) => {
+    let listObject = objects.map((object: any) => {
+      let newObject: Record<any, any> = {};
+      for (let key of keys) {
+        newObject[key] = object[key];
+      }
+      return newObject;
+    });
+    return listObject;
+  };
 
+  const [animationActive, setAnimationActive] = useState(true);
+
+  const loadData = async () => {
+    const foodsTemplate = await getFoods();
+    setDataFood([...unravelObjectList(foodsTemplate, "key", "value")]);
+    setDataX(
+      unravelObjectList(foodsTemplate, "key").map(
+        (object: any) => Object.values(object)[0]
+      )
+    );
+    setDataLabels(
+      unravelObjectList(foodsTemplate, "label").map(
+        (object: any) => Object.values(object)[0]
+      )
+    );
+    setTimeout(() => console.log(dataX, dataFood, dataLabels), 1000);
+  };
+
+  const hanldeWithView = useCallback((event: LayoutChangeEvent) => {
+    const { width } = event.nativeEvent.layout;
+    setWidthView(width);
+  }, []);
 
   useEffect(() => {
-    const animationCharts = () => {
-      if (teste.current) {
-        setTimeout(() => {
-          let teste2 = document.querySelectorAll(
-            "div[tabIndex='0']"
-          )[0] as unknown as HTMLElement;
-          let bar = teste2.querySelectorAll("div[tabIndex='0']");
-          let allBar: any = [];
-          bar.forEach((div: Element) => {
-            (div.firstElementChild as HTMLDivElement).style.height = "0px";
-            allBar.push({
-              min: div.firstElementChild,
-              max: div.firstElementChild?.firstElementChild,
-            });
-          });
-  
-          setTimeout(() => {
-            setLoading(true);
-            allBar.forEach((div: any) => {
-              div.min.style.transition = "height 2s";
-              let style = getComputedStyle(div.max);
-              div.min.style.height = `${style.height}`;
-            });
-          }, 100);
-        }, 200);
-      }
-    };
     loadData();
-    animationCharts();
-  }, [teste]);
+  }, []);
 
   return (
-    <Animated.View
+    <Animated.ScrollView
       entering={SlideInRight}
-      style={{
-        flex: 1,
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        backgroundColor: "#ffff",
-        gap: 20,
-      }}
+      contentContainerStyle={styles.container}
     >
-      {/* Dismiss modal when pressing outside */}
-      <Link href={"/"} asChild>
+      <DateTimePicker
+        value={date}
+        mode="date"
+        display={Platform.OS === "android" ? "calendar" : "inline"}
+        onChange={onChange}
+        minimumDate={new Date(1950, 0, 1)}
+        maximumDate={new Date()}
+        locale="pt-BR"
+        textColor="#333" // Android apenas
+        themeVariant="light" // iOS apenas
+      />
+      {/* <Link href={"/"} asChild>
         <Pressable style={StyleSheet.absoluteFill} />
-      </Link>
-      <View
-        style={{
-          width: "95%",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          minHeight: 300,
-          gap: 20,
-          boxSizing: "border-box",
-          boxShadow: "rgba(0, 0, 0, 0.24) 0px 3px 8px",
-          padding: 30,
-        }}
-      >
+      </Link> */}
+      <View onLayout={hanldeWithView} style={styles.containerChart}>
+        <View style={styles.buttonContainer}>
+          <Button
+            title="Selecionar Data"
+            onPress={() => showDatePicker("date")}
+            color="#2196F3"
+          />
+          <Button
+            title="Selecionar Hora"
+            onPress={() => showDatePicker("time")}
+            color="#4CAF50"
+          />
+        </View>
+        <View>
+          <Text style={styles.selectedDate}>
+            Data: {date.toLocaleDateString("pt-BR")}
+          </Text>
+          <Text style={styles.selectedTime}>
+            Hora: {date.toLocaleTimeString("pt-BR")}
+          </Text>
+        </View>
         {(() => {
           if (!loading) {
             return (
               <>
-                <View ref={teste}>
-                  <BarChart
-                    renderTooltip={() => "teste"}
-                    showValuesAsTopLabel={true}
-                    showGradient={true}
-                    minHeight={3}
-                    initialSpacing={10}
-                    maxValue={maxY}
-                    noOfSections={2}
-                    data={dataFood}
-                    spacing={30}
-                    isAnimated={true}
-                    animationDuration={2000}
+                <VictoryChart theme={VictoryTheme.material} domainPadding={20}>
+                  <VictoryAxis tickValues={dataX} tickFormat={dataLabels} />
+                  <VictoryAxis
+                    dependentAxis
+                    // tickFormat={(x) => `$${x / 1000}k`}
                   />
-                </View>
+                  <VictoryBar
+                    data={dataFood}
+                    x="key"
+                    y="value"
+                    animate={{
+                      // onLoad: { duration: 3000 }, // Animação inicial
+                      onExit: { duration: 500 }, // Animação ao remover dados
+                      onEnter: { duration: 500 }, // Animação ao adicionar dados
+                    }}
+                    style={{
+                      data: {
+                        fill: ({ datum }) =>
+                          datum.value > 15000 ? "#4CAF50" : "#FF5722",
+                        width: 20,
+                      },
+                    }}
+                  />
+                </VictoryChart>
+
+                <Button
+                  title={
+                    animationActive ? "Desativar Animação" : "Ativar Animação"
+                  }
+                  onPress={() => setAnimationActive(!animationActive)}
+                  color="#9C27B0"
+                />
                 <SegmentedControl
                   tabStyle={{ padding: 10 }}
                   appearance={"light"}
@@ -195,17 +252,55 @@ export default function ModalChart() {
         })()}
       </View>
       {/* <Text style={{ fontWeight: "bold", marginBottom: 10 }}>Modal Screen</Text> */}
-      <Link href="/explore"></Link>
-    </Animated.View>
+      {/* <Link href="/explore"></Link> */}
+    </Animated.ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
+  containerChart: {
+    // Mimic the card style from the image
+    width: "90%",
+    backgroundColor: "#ffffff", // Card background
+    borderRadius: 16, // Rounded corners
+    paddingVertical: 16, // Vertical padding inside the card
+    paddingHorizontal: 8, // Horizontal padding inside the card
+    marginVertical: 10, // Margin around the card
+    marginHorizontal: 10, // Margin around the card
+    alignItems: "center", // Center chart horizontally
+    // iOS Shadow
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 3.84,
+    // Android Shadow
+    elevation: 5,
+  },
+  buttonContainer: {
+    flexDirection: "row",
+    gap: 10,
+    marginBottom: 20,
+  },
+  chartTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    marginBottom: 10,
+    color: "#333",
+  },
   container: {
     flex: 1,
     display: "flex",
     alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: "#ffff",
+    gap: 20,
   },
-  teste: {},
+  selectedDate: {
+    fontSize: 16,
+    color: "#333",
+    marginBottom: 8,
+  },
+  selectedTime: {
+    fontSize: 16,
+    color: "#333",
+  },
 });
