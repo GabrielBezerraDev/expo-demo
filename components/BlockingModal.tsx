@@ -71,8 +71,8 @@ const BlockingModal = forwardRef(
                   >
                     <Picker.Item label={pickerOptios.titlePlaceHolder} value="" />
   
-                    {pickerOptios.selectValue.map((value: PickerInterface) => (
-                      <Picker.Item label={value.label} value={value.value} />
+                    {pickerOptios.selectValue.map((value: PickerInterface, index: number) => (
+                      <Picker.Item key={index} label={value.label} value={value.value} />
                     ))}
                   </Picker>
                 );

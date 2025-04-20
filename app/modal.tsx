@@ -16,6 +16,7 @@ import {
   Button,
   Module,
   Platform,
+  TextInput,
 } from "react-native";
 import { BarChart } from "react-native-chart-kit";
 import Animated, { SlideInRight } from "react-native-reanimated";
@@ -30,20 +31,21 @@ type Mode = "date" | "time" | "datetime";
 
 async function getFoods(): Promise<any> {
   let formatData: any[] = [];
-  let dataMenuColumns = new Map<string, any>();
+  let dataMenuColumns: Record<string,any> = {}; // Objeto TS substituindo o Map
   let response = (await supabase.from("Menu").select(`id, food`)) as any;
   let dataMenu: any = response.data;
+  
   dataMenu.forEach((menu: any) => {
-    dataMenuColumns.set(menu.food, {
+    dataMenuColumns[menu.food] = { // Atribuição direta no objeto
       key: menu.id,
       label: menu.food,
-    });
+    };
   });
-  // console.log(dataMenuColumns.entries());
+
   let { data, error } = (await supabase.from("Order").select(`
     Menu!food (id, food)
   `)) as any;
-  // console.log(formatData);
+
   if (data) {
     let count: number = 0;
     for (let i = 0; i < data.length; i++) {
@@ -51,34 +53,34 @@ async function getFoods(): Promise<any> {
         formatData.some(
           (dataFormat: any) => dataFormat.key === data[i]["Menu"].id
         )
-      )
-        continue;
+      ) continue;
+
       for (let j = 0; j < data.length; j++) {
         if (data[i]["Menu"].id === data[j]["Menu"].id) {
           count++;
         }
         if (j === data.length - 1) {
           formatData.push({
-            ...dataMenuColumns.get(data[i]["Menu"].food),
+            ...dataMenuColumns[data[i]["Menu"].food], // Acesso direto via propriedade
             value: count,
           });
           count = 0;
         }
       }
     }
-    dataMenuColumns.keys().forEach((key: string) => {
+
+    // Iterar pelas chaves do objeto
+    Object.keys(dataMenuColumns).forEach((key: string) => {
       if (!formatData.some((object: any) => object.label === key)) {
-        formatData.push({ ...dataMenuColumns.get(key), value: 0 });
+        formatData.push({ ...dataMenuColumns[key], value: 0 });
       }
     });
+
     formatData.sort((a, b) => b.value - a.value);
   }
+
   return formatData.length > 0 ? createColumns(formatData) : [];
 }
-
-// function animationCharts<T>(ref: T | null) {
-
-// }
 
 function createColumns(formatData: any) {
   let columns: any = [];
@@ -91,17 +93,35 @@ function createColumns(formatData: any) {
 export default function ModalChart() {
   let teste = useRef<View>(null);
 
+  const [startDate, setStartDate] = useState<Date>(new Date());
+  const [endDate, setEndDate] = useState<Date>(new Date());
+  const [showStartPicker, setShowStartPicker] = useState(false);
+  const [showEndPicker, setShowEndPicker] = useState(false);
   let [loading, setLoading] = useState(false);
   let [widthView, setWidthView] = useState(0);
   let [dataFood, setDataFood] = useState<any>([]);
   let [dataX, setDataX] = useState<any>();
   let [dataLabels, setDataLabels] = useState<any>();
-  let [dataY, setDataY] = useState<any>();
-  let [maxY, setMaxY] = useState<any>();
-
   const [date, setDate] = useState<Date>(new Date());
   const [showPicker, setShowPicker] = useState<boolean>(false);
   const [mode, setMode] = useState<Module>("date");
+
+  const handleStartDateChange = (event: DateTimePickerEvent, date?: Date) => {
+    setShowStartPicker(false);
+    if (date) {
+      setStartDate(date);
+      if (date > endDate) {
+        setEndDate(date);
+      }
+    }
+  };
+
+  const handleEndDateChange = (event: DateTimePickerEvent, date?: Date) => {
+    setShowEndPicker(false);
+    if (date && date >= startDate) {
+      setEndDate(date);
+    }
+  };
 
   const onChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
     const currentDate = selectedDate || date;
@@ -145,7 +165,7 @@ export default function ModalChart() {
         (object: any) => Object.values(object)[0]
       )
     );
-    setTimeout(() => console.log(dataX, dataFood, dataLabels), 1000);
+    console.log(dataX, dataFood, dataLabels);
   };
 
   const hanldeWithView = useCallback((event: LayoutChangeEvent) => {
@@ -162,60 +182,70 @@ export default function ModalChart() {
       entering={SlideInRight}
       contentContainerStyle={styles.container}
     >
-      <DateTimePicker
-        value={date}
-        mode="date"
-        display={Platform.OS === "android" ? "calendar" : "inline"}
-        onChange={onChange}
-        minimumDate={new Date(1950, 0, 1)}
-        maximumDate={new Date()}
-        locale="pt-BR"
-        textColor="#333" // Android apenas
-        themeVariant="light" // iOS apenas
-      />
-      {/* <Link href={"/"} asChild>
-        <Pressable style={StyleSheet.absoluteFill} />
-      </Link> */}
       <View onLayout={hanldeWithView} style={styles.containerChart}>
-        <View style={styles.buttonContainer}>
-          <Button
-            title="Selecionar Data"
-            onPress={() => showDatePicker("date")}
-            color="#2196F3"
-          />
-          <Button
-            title="Selecionar Hora"
-            onPress={() => showDatePicker("time")}
-            color="#4CAF50"
-          />
-        </View>
-        <View>
-          <Text style={styles.selectedDate}>
-            Data: {date.toLocaleDateString("pt-BR")}
-          </Text>
-          <Text style={styles.selectedTime}>
-            Hora: {date.toLocaleTimeString("pt-BR")}
-          </Text>
+        <View
+          style={{
+            display: "flex",
+            flexDirection: "row",
+            gap: 20,
+          }}
+        >
+          <View style={styles.pickerContainer}>
+            <Text
+              style={styles.dateText}
+              onPress={() => setShowStartPicker(true)}
+            >
+              De: {startDate.toLocaleDateString("pt-BR")}
+            </Text>
+
+            {showStartPicker && (
+              <DateTimePicker
+                value={startDate}
+                mode="date"
+                display={Platform.OS === "android" ? "calendar" : "inline"}
+                onChange={handleStartDateChange}
+                minimumDate={new Date(1950, 0, 1)}
+                maximumDate={endDate}
+                locale="pt-BR"
+                themeVariant="light"
+              />
+            )}
+          </View>
+          <View style={styles.pickerContainer}>
+            <Text
+              style={styles.dateText}
+              onPress={() => setShowEndPicker(true)}
+            >
+              Até: {endDate.toLocaleDateString("pt-BR")}
+            </Text>
+
+            {showEndPicker && (
+              <DateTimePicker
+                value={endDate}
+                mode="date"
+                display={Platform.OS === "android" ? "calendar" : "inline"}
+                onChange={handleEndDateChange}
+                minimumDate={startDate}
+                maximumDate={new Date()}
+                locale="pt-BR"
+                themeVariant="light"
+              />
+            )}
+          </View>
         </View>
         {(() => {
           if (!loading) {
             return (
               <>
-                <VictoryChart theme={VictoryTheme.material} domainPadding={20}>
+                <VictoryChart theme={VictoryTheme.material} domainPadding={20} animate={{duration:1000}}>
                   <VictoryAxis tickValues={dataX} tickFormat={dataLabels} />
                   <VictoryAxis
                     dependentAxis
-                    // tickFormat={(x) => `$${x / 1000}k`}
                   />
                   <VictoryBar
                     data={dataFood}
                     x="key"
                     y="value"
-                    animate={{
-                      // onLoad: { duration: 3000 }, // Animação inicial
-                      onExit: { duration: 500 }, // Animação ao remover dados
-                      onEnter: { duration: 500 }, // Animação ao adicionar dados
-                    }}
                     style={{
                       data: {
                         fill: ({ datum }) =>
@@ -226,19 +256,10 @@ export default function ModalChart() {
                   />
                 </VictoryChart>
 
-                <Button
-                  title={
-                    animationActive ? "Desativar Animação" : "Ativar Animação"
-                  }
-                  onPress={() => setAnimationActive(!animationActive)}
-                  color="#9C27B0"
-                />
-                <SegmentedControl
-                  tabStyle={{ padding: 10 }}
-                  appearance={"light"}
-                  onValueChange={(value) => console.log(value)}
-                  values={["Anterior", "Próximo"]}
-                ></SegmentedControl>
+                <View style={{display:"flex",flexDirection:"row", justifyContent:"space-between", width:"100%", paddingHorizontal:30}}>
+                  <Button title="Anterior"></Button>
+                  <Button title="Próximo"></Button>
+                </View>
               </>
             );
           } else {
@@ -251,8 +272,6 @@ export default function ModalChart() {
           }
         })()}
       </View>
-      {/* <Text style={{ fontWeight: "bold", marginBottom: 10 }}>Modal Screen</Text> */}
-      {/* <Link href="/explore"></Link> */}
     </Animated.ScrollView>
   );
 }
@@ -268,12 +287,10 @@ const styles = StyleSheet.create({
     marginVertical: 10, // Margin around the card
     marginHorizontal: 10, // Margin around the card
     alignItems: "center", // Center chart horizontally
-    // iOS Shadow
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
     shadowRadius: 3.84,
-    // Android Shadow
     elevation: 5,
   },
   buttonContainer: {
@@ -302,5 +319,16 @@ const styles = StyleSheet.create({
   selectedTime: {
     fontSize: 16,
     color: "#333",
+  },
+  pickerContainer: {
+    marginVertical: 10,
+  },
+  dateText: {
+    fontSize: 16,
+    color: "#2196F3",
+    padding: 10,
+    borderWidth: 1,
+    borderColor: "#2196F3",
+    borderRadius: 5,
   },
 });

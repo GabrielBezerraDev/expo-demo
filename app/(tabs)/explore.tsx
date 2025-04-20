@@ -21,7 +21,6 @@ type ItemProps = {
 const Item = ({ item, onPress, style }: ItemProps) => (
   <TouchableOpacity onPress={onPress} style={style}>
     <View style={styles.item}>
-      {" "}
       {/* Alterado div para View */}
       <Ionicons name="bar-chart-outline" size={32} />
       <Text style={styles.title}>{item.title}</Text>
