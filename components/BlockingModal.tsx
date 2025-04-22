@@ -16,7 +16,7 @@ interface PickerInterface {
 }
 interface PickerOptionsInterface {
   execFunction: (closeModal: () => void) => void;
-  setVariable: (value:any) => void;
+  setVariable: (value: any) => void;
   selectValue: PickerInterface[];
   titlePlaceHolder: string;
 }
@@ -35,13 +35,12 @@ export interface BlockingModalHandle {
 
 const BlockingModal = forwardRef(
   ({ modalOptions }: { modalOptions: ModalOptionsInterface }, ref?) => {
-
     let pickerOptios: PickerOptionsInterface | undefined;
     if (modalOptions.activePicker) {
       pickerOptios = modalOptions.pickerOptions;
     }
     const [isVisible, setIsVisible] = useState(modalOptions.visible ?? false);
-    
+
     const closeModal = () => setIsVisible(false);
 
     useImperativeHandle(
@@ -51,7 +50,29 @@ const BlockingModal = forwardRef(
           setIsVisible: setIsVisible,
         } as BlockingModalHandle)
     );
+    const pickerTable = (): React.ReactNode => {
+      let setPickerOptios = pickerOptios as PickerOptionsInterface;
+      return (
+        <Picker
+          onValueChange={(itemValue: number) =>
+            setPickerOptios.setVariable(itemValue)
+          }
+          style={styles.picker}
+        >
+          <Picker.Item label="Selecione uma comida..." value="" />
 
+          {setPickerOptios.selectValue.map(
+            (value: PickerInterface, index: number) => (
+              <Picker.Item
+                key={index}
+                label={value.label}
+                value={value.value}
+              />
+            )
+          )}
+        </Picker>
+      );
+    };
     return (
       <Modal
         visible={isVisible}
@@ -59,26 +80,20 @@ const BlockingModal = forwardRef(
         animationType="fade"
         onRequestClose={closeModal}
       >
-        <View  style={styles.overlay}>
+        <View style={styles.overlay}>
           <View style={styles.modalContainer}>
             <Text style={styles.modalText}>{modalOptions.modalText}</Text>
-            {(() => {
-              if (modalOptions.activePicker && pickerOptios) {
-                return (
-                  <Picker
-                    onValueChange={(itemValue: any) => pickerOptios.setVariable(itemValue)}
-                    style={styles.picker}
-                  >
-                    <Picker.Item label={pickerOptios.titlePlaceHolder} value="" />
-  
-                    {pickerOptios.selectValue.map((value: PickerInterface, index: number) => (
-                      <Picker.Item key={index} label={value.label} value={value.value} />
-                    ))}
-                  </Picker>
-                );
+            {modalOptions.activePicker && pickerOptios && pickerTable()}
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={
+                modalOptions.activePicker
+                  ? function () {
+                      pickerOptios?.execFunction(closeModal);
+                    }
+                  : closeModal
               }
-            })()}
-            <TouchableOpacity style={styles.closeButton} onPress={modalOptions.activePicker ? function(){pickerOptios?.execFunction(closeModal)} : closeModal}>
+            >
               <Text style={styles.buttonText}>{modalOptions.buttonTitle}</Text>
             </TouchableOpacity>
           </View>
@@ -106,7 +121,14 @@ const styles = StyleSheet.create({
   },
   picker: {
     padding: 10,
-    marginBottom: 10
+    marginBottom: 10,
+  },
+  pickerContainer: {
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 4,
+    marginBottom: 15,
+    overflow: "hidden",
   },
   modalText: {
     fontSize: 18,

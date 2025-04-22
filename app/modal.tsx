@@ -1,6 +1,4 @@
 import { supabase } from "@/services/supabase";
-import SegmentedControl from "@react-native-segmented-control/segmented-control";
-import { Link } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import DateTimePicker, {
   DateTimePickerEvent,
@@ -9,42 +7,57 @@ import {
   StyleSheet,
   Text,
   View,
-  Pressable,
   ActivityIndicator,
-  Dimensions,
   LayoutChangeEvent,
   Button,
   Module,
   Platform,
-  TextInput,
 } from "react-native";
-import { BarChart } from "react-native-chart-kit";
 import Animated, { SlideInRight } from "react-native-reanimated";
 import {
   VictoryAxis,
   VictoryBar,
   VictoryChart,
+  VictoryPie,
   VictoryTheme,
+  VictoryTooltip,
 } from "victory-native";
 
 type Mode = "date" | "time" | "datetime";
 
-async function getFoods(): Promise<any> {
+async function getFoods(
+  startDate: Date,
+  endOfDay: Date,
+  setThereIsData: React.Dispatch<React.SetStateAction<boolean>>
+): Promise<any> {
   let formatData: any[] = [];
-  let dataMenuColumns: Record<string,any> = {}; // Objeto TS substituindo o Map
+  let dataMenuColumns: Record<string, any> = {};
   let response = (await supabase.from("Menu").select(`id, food`)) as any;
   let dataMenu: any = response.data;
-  
+
+  const formatDate = (date: string) => {
+    return date.replace(/T|Z/g, " ");
+  };
+
+  let startDateFormat: string = formatDate((startDate as Date).toISOString());
+  let endDateFormat: string = formatDate((endOfDay as Date).toISOString());
+
   dataMenu.forEach((menu: any) => {
-    dataMenuColumns[menu.food] = { // Atribuição direta no objeto
+    dataMenuColumns[menu.food] = {
       key: menu.id,
       label: menu.food,
     };
   });
 
-  let { data, error } = (await supabase.from("Order").select(`
+  let { data, error }: { data: any; error: any } = await supabase
+    .from("Order")
+    .select(
+      `
     Menu!food (id, food)
-  `)) as any;
+  `
+    )
+    .gte("createdAt", startDateFormat)
+    .lte("createdAt", endDateFormat);
 
   if (data) {
     let count: number = 0;
@@ -53,23 +66,24 @@ async function getFoods(): Promise<any> {
         formatData.some(
           (dataFormat: any) => dataFormat.key === data[i]["Menu"].id
         )
-      ) continue;
+      )
+        continue;
 
       for (let j = 0; j < data.length; j++) {
-        if (data[i]["Menu"].id === data[j]["Menu"].id) {
+        if (data[i]["Menu"].id === data[j]["Menu"].id && i !== j) {
           count++;
+          setThereIsData(true);
         }
         if (j === data.length - 1) {
           formatData.push({
-            ...dataMenuColumns[data[i]["Menu"].food], // Acesso direto via propriedade
-            value: count,
+            ...dataMenuColumns[data[i]["Menu"].food],
+            value: count + 1,
           });
           count = 0;
         }
       }
     }
 
-    // Iterar pelas chaves do objeto
     Object.keys(dataMenuColumns).forEach((key: string) => {
       if (!formatData.some((object: any) => object.label === key)) {
         formatData.push({ ...dataMenuColumns[key], value: 0 });
@@ -78,6 +92,8 @@ async function getFoods(): Promise<any> {
 
     formatData.sort((a, b) => b.value - a.value);
   }
+
+  console.log(formatData);
 
   return formatData.length > 0 ? createColumns(formatData) : [];
 }
@@ -91,15 +107,20 @@ function createColumns(formatData: any) {
 }
 
 export default function ModalChart() {
-  let teste = useRef<View>(null);
-
-  const [startDate, setStartDate] = useState<Date>(new Date());
-  const [endDate, setEndDate] = useState<Date>(new Date());
+  let currentDate = new Date();
+  const [startDate, setStartDate] = useState<Date>(
+    new Date(currentDate.getFullYear(), currentDate.getMonth(), 1)
+  );
+  const [endDate, setEndDate] = useState<Date>(
+    new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0)
+  );
   const [showStartPicker, setShowStartPicker] = useState(false);
   const [showEndPicker, setShowEndPicker] = useState(false);
   let [loading, setLoading] = useState(false);
+  let [thereIsData, setThereIsData] = useState(false);
   let [widthView, setWidthView] = useState(0);
-  let [dataFood, setDataFood] = useState<any>([]);
+  let [dataFoodBar, setDataFoodBar] = useState<any>([]);
+  let [dataFoodPie, setDataFoodPie] = useState<any>([]);
   let [dataX, setDataX] = useState<any>();
   let [dataLabels, setDataLabels] = useState<any>();
   const [date, setDate] = useState<Date>(new Date());
@@ -114,6 +135,74 @@ export default function ModalChart() {
         setEndDate(date);
       }
     }
+  };
+
+  const renderChartBar = (): React.ReactNode => {
+    if (loading) {
+      return (
+        <>
+          <ActivityIndicator size="large" color="#0000ff" />
+          <Text style={{ fontWeight: "bold" }}>Carregando Gráfico</Text>
+        </>
+      );
+    }
+
+    return (
+      <>
+        <Text style={{ fontWeight: "bold" }}>Gráfico de Barras (Por pedidos):</Text>
+        <VictoryChart
+          theme={VictoryTheme.material}
+          domain={{ y: thereIsData ? undefined : [0, 10] }}
+          domainPadding={20}
+          animate={{ duration: 1000 }}
+        >
+          <VictoryAxis tickValues={dataX} tickFormat={dataLabels} />
+          <VictoryAxis dependentAxis />
+          <VictoryBar
+            data={dataFoodBar}
+            x="key"
+            y="value"
+            style={{
+              data: {
+                fill: ({ datum }) =>
+                  datum.value > 15000 ? "#4CAF50" : "#FF5722",
+                width: 20,
+              },
+            }}
+          />
+        </VictoryChart>
+      </>
+    );
+  };
+
+  const renderChartPie = (): React.ReactNode => {
+    if (loading) {
+      return (
+        <>
+          <ActivityIndicator size="large" color="#0000ff" />
+          <Text style={{ fontWeight: "bold" }}>Carregando Gráfico</Text>
+        </>
+      );
+    }
+
+    return (
+      <>
+        <Text style={{ fontWeight: "bold" }}>Gráfico de Pizza (Porcentagem):</Text>
+        <VictoryPie
+          theme={VictoryTheme.clean}
+          labelRadius={70}
+          animate={{ duration: 1000 }}
+          data={dataFoodPie}
+          style={{
+            labels: {
+              fill: "#ffff", // Cor do texto (preto)
+              fontSize: 12, // Tamanho da fonte
+              fontWeight: "bold", // Peso da fonte
+            },
+          }}
+        />
+      </>
+    );
   };
 
   const handleEndDateChange = (event: DateTimePickerEvent, date?: Date) => {
@@ -150,11 +239,30 @@ export default function ModalChart() {
     return listObject;
   };
 
+  const formatDataPie = (objects: Record<string, any>[]) => {
+    const totalValue: number = objects.reduce(
+      (acc: number, obj) => acc + obj.value,
+      0
+    );
+
+    return objects
+      .map((obj) => {
+        const porcent = (obj.value * 100) / totalValue;
+        return porcent > 0
+          ? { x: `${obj.label}\n${porcent.toFixed(2)}%`, y: porcent }
+          : null;
+      })
+      .filter(Boolean); // Remove null/undefined
+  };
+
   const [animationActive, setAnimationActive] = useState(true);
 
   const loadData = async () => {
-    const foodsTemplate = await getFoods();
-    setDataFood([...unravelObjectList(foodsTemplate, "key", "value")]);
+    const foodsTemplate = await getFoods(startDate, endDate, setThereIsData);
+    setDataFoodBar([...unravelObjectList(foodsTemplate, "key", "value")]);
+    setDataFoodPie(
+      formatDataPie(unravelObjectList(foodsTemplate, "label", "value"))
+    );
     setDataX(
       unravelObjectList(foodsTemplate, "key").map(
         (object: any) => Object.values(object)[0]
@@ -165,7 +273,6 @@ export default function ModalChart() {
         (object: any) => Object.values(object)[0]
       )
     );
-    console.log(dataX, dataFood, dataLabels);
   };
 
   const hanldeWithView = useCallback((event: LayoutChangeEvent) => {
@@ -174,103 +281,89 @@ export default function ModalChart() {
   }, []);
 
   useEffect(() => {
+    setThereIsData(false);
     loadData();
-  }, []);
+  }, [startDate, endDate]);
 
   return (
     <Animated.ScrollView
       entering={SlideInRight}
-      contentContainerStyle={styles.container}
+      contentContainerStyle={[styles.container]}
+      style={styles.scrollView}
     >
-      <View onLayout={hanldeWithView} style={styles.containerChart}>
-        <View
-          style={{
-            display: "flex",
-            flexDirection: "row",
-            gap: 20,
-          }}
-        >
-          <View style={styles.pickerContainer}>
-            <Text
-              style={styles.dateText}
-              onPress={() => setShowStartPicker(true)}
-            >
-              De: {startDate.toLocaleDateString("pt-BR")}
-            </Text>
+      <View
+        style={{
+          display: "flex",
+          flexDirection: "row",
+          gap: 20,
+          justifyContent: "center",
+          ...styles.containerChart,
+        }}
+      >
+        <View style={styles.pickerContainer}>
+          <Text
+            style={styles.dateText}
+            onPress={() => setShowStartPicker(true)}
+          >
+            De: {startDate.toLocaleDateString("pt-BR")}
+          </Text>
 
-            {showStartPicker && (
-              <DateTimePicker
-                value={startDate}
-                mode="date"
-                display={Platform.OS === "android" ? "calendar" : "inline"}
-                onChange={handleStartDateChange}
-                minimumDate={new Date(1950, 0, 1)}
-                maximumDate={endDate}
-                locale="pt-BR"
-                themeVariant="light"
-              />
-            )}
-          </View>
-          <View style={styles.pickerContainer}>
-            <Text
-              style={styles.dateText}
-              onPress={() => setShowEndPicker(true)}
-            >
-              Até: {endDate.toLocaleDateString("pt-BR")}
-            </Text>
+          {showStartPicker && (
+            <DateTimePicker
+              value={startDate}
+              mode="date"
+              display={Platform.OS === "android" ? "calendar" : "inline"}
+              onChange={handleStartDateChange}
+              maximumDate={endDate}
+              locale="pt-BR"
+              themeVariant="light"
+            />
+          )}
+        </View>
+        <View style={styles.pickerContainer}>
+          <Text style={styles.dateText} onPress={() => setShowEndPicker(true)}>
+            Até: {endDate.toLocaleDateString("pt-BR")}
+          </Text>
 
-            {showEndPicker && (
-              <DateTimePicker
-                value={endDate}
-                mode="date"
-                display={Platform.OS === "android" ? "calendar" : "inline"}
-                onChange={handleEndDateChange}
-                minimumDate={startDate}
-                maximumDate={new Date()}
-                locale="pt-BR"
-                themeVariant="light"
-              />
-            )}
+          {showEndPicker && (
+            <DateTimePicker
+              value={endDate}
+              mode="date"
+              display={Platform.OS === "android" ? "calendar" : "inline"}
+              onChange={handleEndDateChange}
+              minimumDate={startDate}
+              locale="pt-BR"
+              themeVariant="light"
+            />
+          )}
+        </View>
+      </View>
+      <View style={styles.containerBothCharts}>
+        <View onLayout={hanldeWithView} style={styles.containerChart}>
+          <View
+            style={{
+              alignItems: "center",
+              justifyContent: "center",
+              display: "flex",
+              flexDirection: "column",
+              paddingLeft: 10,
+            }}
+          >
+            {renderChartBar()}
           </View>
         </View>
-        {(() => {
-          if (!loading) {
-            return (
-              <>
-                <VictoryChart theme={VictoryTheme.material} domainPadding={20} animate={{duration:1000}}>
-                  <VictoryAxis tickValues={dataX} tickFormat={dataLabels} />
-                  <VictoryAxis
-                    dependentAxis
-                  />
-                  <VictoryBar
-                    data={dataFood}
-                    x="key"
-                    y="value"
-                    style={{
-                      data: {
-                        fill: ({ datum }) =>
-                          datum.value > 15000 ? "#4CAF50" : "#FF5722",
-                        width: 20,
-                      },
-                    }}
-                  />
-                </VictoryChart>
-
-                <View style={{display:"flex",flexDirection:"row", justifyContent:"space-between", width:"100%", paddingHorizontal:30}}>
-                  <Button title="Anterior"></Button>
-                  <Button title="Próximo"></Button>
-                </View>
-              </>
-            );
-          } else {
-            return (
-              <>
-                <ActivityIndicator size="large" color="#0000ff" />
-                <Text style={{ fontWeight: "bold" }}>Carregando Gráfico</Text>
-              </>
-            );
-          }
-        })()}
+        <View onLayout={hanldeWithView} style={styles.containerChart}>
+          <View
+            style={{
+              alignItems: "center",
+              justifyContent: "center",
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
+            {renderChartPie()}
+          </View>
+        </View>
       </View>
     </Animated.ScrollView>
   );
@@ -278,20 +371,29 @@ export default function ModalChart() {
 
 const styles = StyleSheet.create({
   containerChart: {
-    // Mimic the card style from the image
     width: "90%",
-    backgroundColor: "#ffffff", // Card background
-    borderRadius: 16, // Rounded corners
-    paddingVertical: 16, // Vertical padding inside the card
-    paddingHorizontal: 8, // Horizontal padding inside the card
-    marginVertical: 10, // Margin around the card
-    marginHorizontal: 10, // Margin around the card
-    alignItems: "center", // Center chart horizontally
+    backgroundColor: "#ffffff",
+    borderRadius: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 8,
+    marginVertical: 10,
+    marginHorizontal: 10,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
     shadowRadius: 3.84,
     elevation: 5,
+  },
+  containerBothCharts: {
+    width: "100%",
+    alignItems: "center",
+    justifyContent: "center",
+    display: "flex",
+    flexDirection: "column",
+    gap: 40,
+  },
+  scrollView: {
+    width: "100%",
   },
   buttonContainer: {
     flexDirection: "row",
@@ -305,10 +407,10 @@ const styles = StyleSheet.create({
     color: "#333",
   },
   container: {
-    flex: 1,
+    minHeight: "100%",
     display: "flex",
-    alignItems: "center",
     backgroundColor: "#ffff",
+    paddingBottom: 30,
     gap: 20,
   },
   selectedDate: {
@@ -330,5 +432,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#2196F3",
     borderRadius: 5,
+  },
+  navigationButtons: {
+    display: "flex",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    width: "100%",
+    paddingHorizontal: 30,
+  },
+  loadingContainer: {
+    alignItems: "center",
+    gap: 10,
   },
 });
