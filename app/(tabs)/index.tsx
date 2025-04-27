@@ -93,15 +93,20 @@ export default function HomeScreen() {
           activePicker: true,
           pickerOptions: {
             titlePlaceHolder: "Escolha a Mesa",
-            selectValue: [
-              { value: 1, label: "Mesa 1" },
-              { value: 2, label: "Mesa 2" },
-              { value: 3, label: "Mesa 3" },
-              { value: 4, label: "Mesa 4" },
-              { value: 5, label: "Mesa 5" },
-              { value: 6, label: "Mesa 6" },
-              { value: 7, label: "Mesa 7" },
-            ],
+            selectValue: {
+              list: [
+                { _id: 1, value: "Mesa 1", disabled:false },
+                { _id: 2, value: "Mesa 2", disabled:false },
+                { _id: 3, value: "Mesa 3", disabled:false },
+                { _id: 4, value: "Mesa 4", disabled:false },
+                { _id: 5, value: "Mesa 5", disabled:false },
+                { _id: 6, value: "Mesa 6", disabled:false },
+                { _id: 7, value: "Mesa 7", disabled:false },
+              ],
+              value:"",
+              error:"",
+              selectedList:[]
+            },
             setVariable: setTable,
             execFunction: setTableUser,
           },

@@ -1,23 +1,29 @@
-import { Picker } from "@react-native-picker/picker";
+import { Modal, Portal } from "react-native-paper";
 import React, { forwardRef, useImperativeHandle, useState } from "react";
 import {
-  Modal,
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
   Dimensions,
-  TextInput,
 } from "react-native";
+import { PaperSelect } from "react-native-paper-select";
 
 interface PickerInterface {
-  value: any;
-  label: string;
+  _id: any;
+  value: string;
+  disabled: boolean
 }
+
 interface PickerOptionsInterface {
   execFunction: (closeModal: () => void) => void;
   setVariable: (value: any) => void;
-  selectValue: PickerInterface[];
+  selectValue: {
+    value: any;
+    list: PickerInterface[];
+    selectedList: any[];
+    error: string;
+  };
   titlePlaceHolder: string;
 }
 
@@ -35,70 +41,71 @@ export interface BlockingModalHandle {
 
 const BlockingModal = forwardRef(
   ({ modalOptions }: { modalOptions: ModalOptionsInterface }, ref?) => {
-    let pickerOptios: PickerOptionsInterface | undefined;
-    if (modalOptions.activePicker) {
-      pickerOptios = modalOptions.pickerOptions;
-    }
     const [isVisible, setIsVisible] = useState(modalOptions.visible ?? false);
+    const [selectedValue, setSelectedValue] = useState<any>(null);
+    const pickerOptions = modalOptions.pickerOptions;
 
     const closeModal = () => setIsVisible(false);
 
-    useImperativeHandle(
-      ref,
-      () =>
-        ({
-          setIsVisible: setIsVisible,
-        } as BlockingModalHandle)
-    );
-    const pickerTable = (): React.ReactNode => {
-      let setPickerOptios = pickerOptios as PickerOptionsInterface;
-      return (
-        <Picker
-          onValueChange={(itemValue: number) =>
-            setPickerOptios.setVariable(itemValue)
-          }
-          style={styles.picker}
-        >
-          <Picker.Item label="Selecione uma comida..." value="" />
+    useImperativeHandle(ref, () => ({
+      setIsVisible: setIsVisible,
+    }));
 
-          {setPickerOptios.selectValue.map(
-            (value: PickerInterface, index: number) => (
-              <Picker.Item
-                key={index}
-                label={value.label}
-                value={value.value}
-              />
-            )
-          )}
-        </Picker>
-      );
-    };
     return (
-      <Modal
-        visible={isVisible}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={closeModal}
-      >
-        <View style={styles.overlay}>
-          <View style={styles.modalContainer}>
+      <Portal>
+        <Modal
+          visible={isVisible}
+          onDismiss={closeModal}
+          contentContainerStyle={styles.modalContainer}
+        >
+          <View style={styles.content}>
             <Text style={styles.modalText}>{modalOptions.modalText}</Text>
-            {modalOptions.activePicker && pickerOptios && pickerTable()}
+
+            {modalOptions.activePicker && pickerOptions && (
+              <View style={styles.pickerWrapper}>
+                <PaperSelect
+                  label="Escolha a Mesa"
+                  dialogStyle={{
+                    backgroundColor: "#ffff",
+                  }}
+                  dialogTitleStyle={{
+                    color: "#00000",
+                  }}
+                  selectAllEnable={false}
+                  textColor={"black"}
+                  arrayList={pickerOptions.selectValue.list}
+                  selectedArrayList={pickerOptions.selectValue.selectedList}
+                  multiEnable={false}
+                  value={selectedValue}
+                  onSelection={(itemValue) => {
+                    const selectedItem = pickerOptions.selectValue.list.find(
+                      (item) => item._id === itemValue.selectedList[0]?._id
+                    );
+                    setSelectedValue(selectedItem?.value);
+                    pickerOptions.setVariable(selectedItem?.value);
+                  }}
+                  textInputStyle={styles.input}
+                  checkboxProps={{ checkboxLabelStyle: { color: "black", marginRight:50 } }}
+                  searchStyle={{backgroundColor:"black"}}
+                />
+              </View>
+            )}
+
             <TouchableOpacity
               style={styles.closeButton}
-              onPress={
-                modalOptions.activePicker
-                  ? function () {
-                      pickerOptios?.execFunction(closeModal);
-                    }
-                  : closeModal
-              }
+              onPress={() => {
+                if (modalOptions.activePicker) {
+                  pickerOptions?.execFunction(closeModal);
+                } else {
+                  closeModal();
+                }
+              }}
             >
               <Text style={styles.buttonText}>{modalOptions.buttonTitle}</Text>
             </TouchableOpacity>
           </View>
-        </View>
-      </Modal>
+        </Modal>
+      </Portal>
     );
   }
 );
@@ -106,53 +113,46 @@ const BlockingModal = forwardRef(
 const screen = Dimensions.get("window");
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
+  modalContainer: {
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    marginHorizontal: 20,
+    boxShadow: "none"
   },
-  modalContainer: {
-    width: screen.width * 0.8,
+  content: {
     backgroundColor: "white",
     borderRadius: 10,
     padding: 20,
-    alignItems: "center",
+    width: screen.width * 0.8,
   },
-  picker: {
-    padding: 10,
-    marginBottom: 10,
-  },
-  pickerContainer: {
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 4,
-    marginBottom: 15,
-    overflow: "hidden",
+  pickerWrapper: {
+    zIndex: 1000, 
+    marginVertical: 10,
   },
   modalText: {
     fontSize: 18,
     marginBottom: 15,
     textAlign: "center",
+    color: "#333",
   },
   closeButton: {
     backgroundColor: "#FFA500",
-    paddingVertical: 10,
-    paddingHorizontal: 20,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
     borderRadius: 5,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 4,
-    padding: 12,
-    marginBottom: 15,
-    fontSize: 16,
+    marginTop: 15,
+    alignSelf: "center",
   },
   buttonText: {
     fontWeight: "bold",
     color: "white",
     fontSize: 16,
+  },
+  input: {
+    backgroundColor: "white",
+    borderColor: "#ccc",
+    borderWidth: 1,
+    color:"black"
   },
 });
 
