@@ -49,7 +49,6 @@ export default function HomeScreen() {
       setLoading(false);
       setRefreshing(false);
     } catch (error) {
-      console.error("Error fetching orders:", error);
       setLoading(false);
       setRefreshing(false);
     }
@@ -61,11 +60,20 @@ export default function HomeScreen() {
   }, [fetchOrder]);
 
   const setTableUser = useCallback(async (closeModal: () => void) => {
+    closeModal();
     if (table) {
       await AsyncStorage.setItem("table", JSON.stringify({ table }));
-      closeModal();
     }
   }, [table]);
+
+  // const setTableUser = async (closeModal: () => void) => {
+  //   console.log("TESTE");
+  //   closeModal();
+  //   if (table) {
+  //     await AsyncStorage.setItem("table", JSON.stringify({ table }));
+  //   }
+  // };
+
 
   return (
     <>
@@ -101,6 +109,12 @@ export default function HomeScreen() {
               { value: 5, label: "Mesa 5" },
               { value: 6, label: "Mesa 6" },
               { value: 7, label: "Mesa 7" },
+              { value: 7, label: "Mesa 7" },
+              { value: 7, label: "Mesa 7" },
+              { value: 7, label: "Mesa 7" },
+              { value: 7, label: "Mesa 7" },
+              { value: 7, label: "Mesa 7" },
+
             ],
             setVariable: setTable,
             execFunction: setTableUser,

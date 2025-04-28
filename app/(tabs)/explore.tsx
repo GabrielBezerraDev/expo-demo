@@ -12,7 +12,7 @@ import { SafeAreaView, SafeAreaProvider } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native"; // Alterado aqui
 import { Stack } from "expo-router";
 
-type ItemProps = {
+export type ItemProps = {
   item: any;
   onPress: () => void;
   style?: any;
@@ -21,7 +21,6 @@ type ItemProps = {
 const Item = ({ item, onPress, style }: ItemProps) => (
   <TouchableOpacity onPress={onPress} style={style}>
     <View style={styles.item}>
-      {/* Alterado div para View */}
       <Ionicons name="bar-chart-outline" size={32} />
       <Text style={styles.title}>{item.title}</Text>
     </View>
@@ -33,7 +32,7 @@ export default function Orders() {
   const navigation = useNavigation();
   const [selectedId, setSelectedId] = useState<string>();
 
-  const renderItem = ({ item }: { item: any }) => {
+ const renderItem = ({ item }: { item: any }) => {
     return (
       <Item
         item={item}

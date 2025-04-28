@@ -384,6 +384,14 @@ const styles = StyleSheet.create({
     shadowRadius: 3.84,
     elevation: 5,
   },
+  input: {
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 4,
+    padding: 12,
+    marginBottom: 15,
+    fontSize: 16,
+  },
   containerBothCharts: {
     width: "100%",
     alignItems: "center",
