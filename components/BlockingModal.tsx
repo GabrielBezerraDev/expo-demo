@@ -135,88 +135,17 @@ const BlockingModal = forwardRef(
       );
     };
 
-    const Select = (): React.ReactNode => {
-      return (
-        <>
-          <SnackBarComponent
-            ref={snackBar}
-            text="Escolha um número antes de confirmar"
-          />
-          <Modal visible={isVisibleSubModal} transparent={true}>
-            <View style={styles.overlaySubModal}>
-              <View style={styles.subModal}>
-                <View
-                  style={{
-                    display: "flex",
-                    flexDirection: "row",
-                    padding: 20,
-                    gap: 20,
-                    width: "100%",
-                  }}
-                >
-                  <Text style={{ fontWeight: "bold", fontSize: 20 }}>
-                    Selecione a Mesa:{" "}
-                    <Text style={{ color: "red" }}>{table}</Text>
-                  </Text>
-                </View>
-                <View style={{ width: "100%", height: "70%", overflowY: "auto" }}>
-                  <SafeAreaProvider style={{ width: "100%" }}>
-                    <SafeAreaView>
-                      <FlatList
-                        style={{ paddingVertical: 20, ...subModalPointerEvent }}
-                        data={modalOptions.pickerOptions?.selectValue}
-                        renderItem={renderItem}
-                        keyExtractor={(item) => item.value}
-                      />
-                    </SafeAreaView>
-                  </SafeAreaProvider>
-                </View>
-                <View
-                  style={{
-                    display: "flex",
-                    flexDirection: "row",
-                    padding: 20,
-                    gap: 20,
-                    justifyContent: "flex-end",
-                    width: "100%",
-                  }}
-                >
-                  <Button
-                    color="#FFA500"
-                    title="Cancelar"
-                    onPress={() => {
-                      setinputValue("");
-                      setTable("");
-                      setSubModalPointerEvent({ pointerEvents: "none" });
-                      closeSubModal();
-                    }}
-                  ></Button>
-                  <Button
-                    color="#FFA500"
-                    title="Confirmar Mesa"
-                    onPress={() => {
-                      setinputValue(`Mesa ${table}`);
-                      setSubModalPointerEvent({ pointerEvents: "none" });
-                      if (table) closeSubModal();
-                      else {
-                        if (snackBar.current) {
-                          snackBar.current.setVisible(true);
-                          snackBar.current.teste();
-                        }
-                      }
-                    }}
-                  ></Button>
-                </View>
-              </View>
-            </View>
-          </Modal>
-        </>
-      );
-    };
+    const Select = useCallback((): React.ReactNode => {
+      return <Text style={{ color: "red" }}>{table}</Text>;
+    }, [table]);
 
     return (
       <>
-        <Select />
+        {/* <SnackBarComponent
+          ref={snackBar}
+          text="Escolha um número antes de confirmar"
+        /> */}
+
         <Modal visible={isVisible} transparent={true} animationType="fade">
           <View style={styles.overlay}>
             <View style={styles.modalContainer}>
@@ -228,7 +157,7 @@ const BlockingModal = forwardRef(
                   modalOptions.activePicker
                     ? function () {
                         pickerOptios?.execFunction(function () {
-                          // closeAllModal(item.value);
+                          closeModal();
                         });
                       }
                     : closeModal
@@ -238,6 +167,77 @@ const BlockingModal = forwardRef(
                   {modalOptions.buttonTitle}
                 </Text>
               </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+        <Modal visible={isVisibleSubModal} transparent={true}>
+          <View style={styles.overlaySubModal}>
+            <View style={styles.subModal}>
+              <View
+                style={{
+                  display: "flex",
+                  flexDirection: "row",
+                  padding: 10,
+                  gap: 20,
+                  width: "100%",
+                }}
+              >
+                <Text style={{ fontWeight: "bold", fontSize: 20 }}>
+                  Selecione a Mesa: <Select />
+                </Text>
+              </View>
+              <View style={{ width: "100%", height: "70%", overflowY: "auto" }}>
+                <SafeAreaProvider style={{ width: "100%" }}>
+                  <SafeAreaView>
+                    <FlatList
+                      style={{ paddingVertical: 20, ...subModalPointerEvent }}
+                      data={modalOptions.pickerOptions?.selectValue}
+                      renderItem={renderItem}
+                      keyExtractor={(item) => item.value}
+                    />
+                  </SafeAreaView>
+                </SafeAreaProvider>
+              </View>
+              <View
+                style={{
+                  display: "flex",
+                  flexDirection: "row",
+                  padding: 20,
+                  gap: 20,
+                  justifyContent: "flex-end",
+                  width: "100%",
+                }}
+              >
+                <Button
+                  color="#FFA500"
+                  title="Cancelar"
+                  onPress={() => {
+                    setinputValue("");
+                    setTable("");
+                    setSubModalPointerEvent({ pointerEvents: "none" });
+                    closeSubModal();
+                  }}
+                ></Button>
+                <Button
+                  color="#FFA500"
+                  title="Confirmar Mesa"
+                  onPress={() => {
+                    setinputValue(`Mesa ${table}`);
+                    setSubModalPointerEvent({ pointerEvents: "none" });
+                    if (table) {
+                      closeSubModal();
+                      pickerOptios?.setVariable(table);
+                    }
+                    else {
+                      alert("Escolha uma Mesa antes de confirmar!");
+                    //   if (snackBar.current) {
+                    //     snackBar.current.setVisible(true);
+                    //     snackBar.current.teste();
+                    // }
+                      }
+                  }}
+                ></Button>
+              </View>
             </View>
           </View>
         </Modal>
@@ -266,7 +266,7 @@ const styles = StyleSheet.create({
     backgroundColor: "white",
     borderRadius: 10,
     alignItems: "center",
-    maxHeight: "80%",
+    maxHeight: "60%",
     display: "flex",
     flexDirection: "column",
   },

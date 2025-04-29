@@ -66,15 +66,6 @@ export default function HomeScreen() {
     }
   }, [table]);
 
-  // const setTableUser = async (closeModal: () => void) => {
-  //   console.log("TESTE");
-  //   closeModal();
-  //   if (table) {
-  //     await AsyncStorage.setItem("table", JSON.stringify({ table }));
-  //   }
-  // };
-
-
   return (
     <>
       {loading ? (
