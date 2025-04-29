@@ -1,6 +1,13 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Picker } from "@react-native-picker/picker";
-import React, { forwardRef, useCallback, useImperativeHandle, useState } from "react";
+import React, {
+  forwardRef,
+  useCallback,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from "react";
+import { Modal as ModalPaper } from "react-native-paper";
 import {
   Modal,
   View,
@@ -9,17 +16,24 @@ import {
   StyleSheet,
   Dimensions,
   TextInput,
+  Button,
+  ScrollView,
+  Touchable,
+  TouchableWithoutFeedback,
+  StyleProp,
+  ViewStyle,
 } from "react-native";
 import { FlatList } from "react-native";
 import { Divider } from "react-native-paper";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
+import SnackBarComponent from "./SnackBar";
 
 interface PickerInterface {
   value: any;
   label: string;
 }
 interface PickerOptionsInterface {
-  execFunction: (closeModal: (...args:any) => void) => void;
+  execFunction: (closeModal: (...args: any) => void) => void;
   setVariable: (value: any) => void;
   selectValue: PickerInterface[];
   titlePlaceHolder: string;
@@ -51,23 +65,26 @@ const BlockingModal = forwardRef(
     }
     const [isVisible, setIsVisible] = useState(modalOptions.visible ?? false);
     const [isVisibleSubModal, setIsVisibleSubModal] = useState(false);
+    let snackBar = useRef<any>(null);
+    const [subModalPointerEvent, setSubModalPointerEvent] = useState<ViewStyle>(
+      { pointerEvents: "none" }
+    );
+    const [table, setTable] = useState("");
+    const [inputValue, setinputValue] = useState("");
+    // const [selectTable, setselectTable] = useState("Selecione a Mesa");
 
-    const teste = () => {
-      setIsVisibleSubModal(true);
-    };
-
-    const closeModalt = useCallback((value?:string) => {
-      console.log(value);
+    const closeAllModal = useCallback((value?: string) => {
       setIsVisible(false);
       setIsVisibleSubModal(false);
-    },[]);
+    }, []);
 
     const closeModal = () => {
-      // console.log(value);
       setIsVisible(false);
-      // setIsVisibleSubModal(false);
     };
 
+    const closeSubModal = () => {
+      setIsVisibleSubModal(false);
+    };
 
     const Item = ({ item, onPress, style }: ItemProps) => (
       <TouchableOpacity
@@ -86,9 +103,7 @@ const BlockingModal = forwardRef(
         <Item
           item={item}
           onPress={() => {
-            pickerOptios?.execFunction(function(){
-              closeModalt(item.value);
-            });
+            setTable(item.value);
           }}
         />
       );
@@ -96,6 +111,10 @@ const BlockingModal = forwardRef(
 
     const testeAlert = useCallback(() => {
       setIsVisibleSubModal(true);
+      setTimeout(
+        () => setSubModalPointerEvent({ pointerEvents: "auto" }),
+        1000
+      );
     }, []);
 
     useImperativeHandle(
@@ -105,82 +124,112 @@ const BlockingModal = forwardRef(
           setIsVisible: setIsVisible,
         } as BlockingModalHandle)
     );
-    // const pickerTable = (): React.ReactNode => {
-    //   let setPickerOptios = pickerOptios as PickerOptionsInterface;
-    //   return (
-    //     <Picker
-    //       onValueChange={(itemValue: number) =>
-    //         setPickerOptios.setVariable(itemValue)
-    //       }
-    //       style={styles.picker}
-    //     >
-    //       <Picker.Item label="Selecione uma comida..." value="" />
-
-    //       {setPickerOptios.selectValue.map(
-    //         (value: PickerInterface, index: number) => (
-    //           <Picker.Item
-    //             key={index}
-    //             label={value.label}
-    //             value={value.value}
-    //           />
-    //         )
-    //       )}
-    //     </Picker>
-    //   );
-    // };
 
     const InputSelect = (): React.ReactNode => {
       return (
-        <TextInput onTouchStart={testeAlert}  style={styles.input}/>
+        <TextInput
+          value={inputValue}
+          onTouchStart={testeAlert}
+          style={styles.input}
+        />
       );
-    }
+    };
 
     const Select = (): React.ReactNode => {
       return (
-        <Modal
-          visible={isVisibleSubModal}
-          transparent={true}
-          animationType="fade"
-          // onRequestClose={closeModal}
-        >
-          <View style={styles.overlaySubModal}>
-            <View style={styles.subModal}>
-              <SafeAreaProvider style={{ width: "100%" }}>
-                <SafeAreaView>
-                  <FlatList
-                    style={{ paddingVertical: 20 }}
-                    data={modalOptions.pickerOptions?.selectValue}
-                    renderItem={renderItem}
-                    keyExtractor={(item) => item.value}
-                    // extraData={selectedId}
-                  />
-                </SafeAreaView>
-              </SafeAreaProvider>
+        <>
+          <SnackBarComponent
+            ref={snackBar}
+            text="Escolha um número antes de confirmar"
+          />
+          <Modal visible={isVisibleSubModal} transparent={true}>
+            <View style={styles.overlaySubModal}>
+              <View style={styles.subModal}>
+                <View
+                  style={{
+                    display: "flex",
+                    flexDirection: "row",
+                    padding: 20,
+                    gap: 20,
+                    width: "100%",
+                  }}
+                >
+                  <Text style={{ fontWeight: "bold", fontSize: 20 }}>
+                    Selecione a Mesa:{" "}
+                    <Text style={{ color: "red" }}>{table}</Text>
+                  </Text>
+                </View>
+                <View style={{ width: "100%", height: "70%", overflowY: "auto" }}>
+                  <SafeAreaProvider style={{ width: "100%" }}>
+                    <SafeAreaView>
+                      <FlatList
+                        style={{ paddingVertical: 20, ...subModalPointerEvent }}
+                        data={modalOptions.pickerOptions?.selectValue}
+                        renderItem={renderItem}
+                        keyExtractor={(item) => item.value}
+                      />
+                    </SafeAreaView>
+                  </SafeAreaProvider>
+                </View>
+                <View
+                  style={{
+                    display: "flex",
+                    flexDirection: "row",
+                    padding: 20,
+                    gap: 20,
+                    justifyContent: "flex-end",
+                    width: "100%",
+                  }}
+                >
+                  <Button
+                    color="#FFA500"
+                    title="Cancelar"
+                    onPress={() => {
+                      setinputValue("");
+                      setTable("");
+                      setSubModalPointerEvent({ pointerEvents: "none" });
+                      closeSubModal();
+                    }}
+                  ></Button>
+                  <Button
+                    color="#FFA500"
+                    title="Confirmar Mesa"
+                    onPress={() => {
+                      setinputValue(`Mesa ${table}`);
+                      setSubModalPointerEvent({ pointerEvents: "none" });
+                      if (table) closeSubModal();
+                      else {
+                        if (snackBar.current) {
+                          snackBar.current.setVisible(true);
+                          snackBar.current.teste();
+                        }
+                      }
+                    }}
+                  ></Button>
+                </View>
+              </View>
             </View>
-          </View>
-        </Modal>
+          </Modal>
+        </>
       );
     };
 
     return (
       <>
         <Select />
-        <Modal
-          visible={isVisible}
-          transparent={true}
-          animationType="fade"
-          // onRequestClose={closeModal}
-        >
+        <Modal visible={isVisible} transparent={true} animationType="fade">
           <View style={styles.overlay}>
             <View style={styles.modalContainer}>
               <Text style={styles.modalText}>{modalOptions.modalText}</Text>
-              {modalOptions.activePicker && pickerOptios && <InputSelect/>}
+              {modalOptions.activePicker && pickerOptios && <InputSelect />}
               <TouchableOpacity
                 style={styles.closeButton}
                 onPress={
                   modalOptions.activePicker
                     ? function () {
-                        teste();
+                        pickerOptios?.execFunction(function () {
+                          // closeAllModal(item.value);
+                        });
                       }
                     : closeModal
                 }
@@ -204,21 +253,22 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.5)"
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
   },
   overlaySubModal: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.5)"
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
   },
   subModal: {
     width: screen.width * 0.8,
     backgroundColor: "white",
     borderRadius: 10,
     alignItems: "center",
-    maxHeight: "55%",
-    overflowY: "auto",
+    maxHeight: "80%",
+    display: "flex",
+    flexDirection: "column",
   },
   modalContainer: {
     width: screen.width * 0.8,
@@ -256,6 +306,7 @@ const styles = StyleSheet.create({
     padding: 12,
     marginBottom: 15,
     fontSize: 16,
+    width: "100%",
   },
   buttonText: {
     fontWeight: "bold",
