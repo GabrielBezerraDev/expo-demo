@@ -14,6 +14,7 @@ import { supabase } from "@/services/supabase";
 import { OrderInterfacePost } from "@/interfaces/OrderInterface";
 import { Food } from "@/interfaces/FoodInterface";
 import BlockingModal, { BlockingModalHandle } from "@/components/BlockingModal";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function OrderForm() {
   useEffect(() => {
@@ -41,13 +42,13 @@ export default function OrderForm() {
       .select();
   };
 
-  const handleSubmit = () => {
-    if (!clientName || !tableNumber || !food) {
+  const handleSubmit = async () => {
+    if (!clientName || !food) {
       Alert.alert("Erro", "Preencha todos os campos obrigatórios");
       return;
     }
 
-    let table: string | number = localStorage.getItem("table") as string;
+    let table: string | number = await AsyncStorage.getItem("table") as string;
     if (table) {
       table = Number(JSON.parse(table as string).table) as number;
     }
@@ -78,7 +79,7 @@ export default function OrderForm() {
       <BlockingModal
         ref={modalRef}
         modalOptions={{
-          modalText: "teste",
+          modalText: "Pedido Feito!",
           buttonTitle: "Okay",
         }}
       ></BlockingModal>
